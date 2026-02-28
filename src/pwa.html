@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="mt.inn清掃">
+<meta name="theme-color" content="#1565C0">
+<title>mt. inn 清掃管理</title>
+<style>
+/* ===== リセット & 基本 ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  background: #F0F2F5;
+  color: #333;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+button { font-family: inherit; cursor: pointer; border: none; }
+
+/* ===== ログイン画面 ===== */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #1565C0 0%, #1E88E5 100%);
+  color: #fff;
+}
+.login-title { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+.login-subtitle { font-size: 18px; opacity: 0.9; margin-bottom: 32px; }
+.login-label { font-size: 20px; margin-bottom: 16px; font-weight: 600; }
+.staff-buttons {
+  display: flex; flex-direction: column; gap: 12px;
+  width: 100%; max-width: 360px;
+}
+.staff-btn {
+  background: rgba(255,255,255,0.95);
+  color: #1565C0;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 18px 24px;
+  border-radius: 14px;
+  text-align: center;
+  transition: transform 0.1s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.staff-btn:active { transform: scale(0.97); }
+.login-loading { font-size: 18px; opacity: 0.8; }
+
+/* ===== アプリヘッダー ===== */
+#app { display: none; }
+.app-header {
+  position: sticky; top: 0; z-index: 50;
+  background: #1565C0;
+  color: #fff;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.header-left { display: flex; align-items: center; gap: 8px; }
+.header-title { font-size: 20px; font-weight: 800; }
+.header-user {
+  font-size: 14px;
+  background: rgba(255,255,255,0.2);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.header-actions { display: flex; gap: 8px; }
+.header-btn {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-size: 20px;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.header-btn:active { background: rgba(255,255,255,0.35); }
+
+/* ===== 進捗バー ===== */
+.progress-section {
+  background: #fff;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.progress-label {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+.progress-bar {
+  height: 14px;
+  background: #E0E0E0;
+  border-radius: 7px;
+  overflow: hidden;
+  display: flex;
+}
+.progress-fill-inspected { background: #99E699; }
+.progress-fill-cleaned { background: #FFD699; }
+.progress-fill-cleaning { background: #FFF2CC; }
+.progress-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.count-badge {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* ===== フィルター ===== */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.filter-btn {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #fff;
+  color: #666;
+  white-space: nowrap;
+  border: 2px solid #E0E0E0;
+  transition: all 0.15s;
+}
+.filter-btn.active {
+  background: #1565C0;
+  color: #fff;
+  border-color: #1565C0;
+}
+
+/* ===== 部屋グリッド ===== */
+.floor-section { padding: 0 12px 12px; }
+.floor-header {
+  font-size: 18px;
+  font-weight: 800;
+  padding: 12px 4px 8px;
+  color: #555;
+}
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 500px) {
+  .room-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 768px) {
+  .room-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ===== 部屋カード ===== */
+.room-card {
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.1s;
+  position: relative;
+  cursor: pointer;
+}
+.room-card:active { transform: scale(0.97); }
+.room-card.empty {
+  background: #fff;
+  opacity: 0.5;
+}
+.room-number {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.room-nights {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.7;
+  position: absolute;
+  top: 14px; right: 14px;
+}
+.room-guest {
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.room-status-text {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: auto;
+}
+.room-badge {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.12);
+}
+.room-badge.full-clean { background: #FFCCCC; color: #B71C1C; }
+.room-staff {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* ===== モーダル ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.show {
+  display: flex;
+  animation: fadeIn 0.2s;
+}
+.modal-content {
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 20px 20px 32px;
+  animation: slideUp 0.25s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.modal-handle {
+  width: 40px; height: 5px;
+  background: #D0D0D0;
+  border-radius: 3px;
+  margin: 0 auto 16px;
+}
+.modal-room-number {
+  font-size: 36px;
+  font-weight: 800;
+  text-align: center;
+}
+.modal-guest {
+  font-size: 20px;
+  text-align: center;
+  margin-top: 4px;
+  color: #555;
+}
+.modal-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 12px 0;
+}
+.modal-info-tag {
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: #F0F0F0;
+  font-weight: 500;
+}
+.modal-info-tag.highlight { background: #FFCCCC; font-weight: 700; }
+.modal-current {
+  text-align: center;
+  margin: 16px 0 8px;
+  font-size: 14px;
+  color: #888;
+}
+.modal-current-status {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.modal-section-label {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #555;
+}
+.status-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.status-btn {
+  font-size: 20px;
+  font-weight: 700;
+  padding: 16px;
+  border-radius: 14px;
+  text-align: center;
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.status-btn:active { transform: scale(0.97); }
+.status-btn.current {
+  border: 3px solid #333;
+  position: relative;
+}
+.status-btn.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ===== スタッフ選択画面（モーダル内） ===== */
+.staff-select-view { display: none; }
+.staff-select-view.show { display: block; }
+.staff-select-title {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.staff-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.staff-select-btn {
+  font-size: 20px;
+  font-weight: 600;
+  padding: 16px;
+  border-radius: 14px;
+  background: #F5F5F5;
+  text-align: center;
+  transition: all 0.15s;
+}
+.staff-select-btn.selected {
+  background: #1565C0;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+}
+.confirm-btn {
+  font-size: 22px;
+  font-weight: 800;
+  padding: 18px;
+  border-radius: 14px;
+  width: 100%;
+  color: #fff;
+  background: #1565C0;
+  box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+  margin-bottom: 10px;
+}
+.confirm-btn:disabled {
+  background: #BDBDBD;
+  box-shadow: none;
+}
+.back-btn {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 14px;
+  border-radius: 14px;
+  width: 100%;
+  background: #F0F0F0;
+  color: #555;
+}
+.close-btn {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 14px;
+  border-radius: 14px;
+  width: 100%;
+  background: #F0F0F0;
+  color: #555;
+  margin-top: 8px;
+}
+
+/* ===== トースト ===== */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%; transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 14px 24px;
+  border-radius: 14px;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #C62828; }
+.toast.success { background: #2E7D32; }
+
+/* ===== ローディング ===== */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.7);
+  z-index: 150;
+  align-items: center;
+  justify-content: center;
+}
+.loading-overlay.show {
+  display: flex;
+}
+.spinner {
+  width: 48px; height: 48px;
+  border: 5px solid #E0E0E0;
+  border-top-color: #1565C0;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== 空メッセージ ===== */
+.empty-message {
+  text-align: center;
+  padding: 60px 24px;
+  color: #888;
+  font-size: 18px;
+}
+
+/* ===== iOS safe area ===== */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .modal-content { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== ログイン画面 ===== -->
+<div id="login-screen">
+  <div class="login-title">mt. inn</div>
+  <div class="login-subtitle">清掃管理</div>
+  <div class="login-label">名前を選んでください</div>
+  <div id="staff-list" class="staff-buttons">
+    <div class="login-loading">読み込み中...</div>
+  </div>
+</div>
+
+<!-- ===== アプリ画面 ===== -->
+<div id="app">
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="header-title">mt. inn</span>
+      <span id="header-user" class="header-user"></span>
+    </div>
+    <div class="header-actions">
+      <button class="header-btn" id="btn-refresh" title="更新">&#x21bb;</button>
+      <button class="header-btn" id="btn-logout" title="ログアウト">&#x2716;</button>
+    </div>
+  </header>
+
+  <!-- 進捗バー -->
+  <div class="progress-section">
+    <div class="progress-label">
+      <span>清掃進捗</span>
+      <span id="progress-text">--</span>
+    </div>
+    <div class="progress-bar" id="progress-bar"></div>
+    <div class="progress-counts" id="progress-counts"></div>
+  </div>
+
+  <!-- フィルター -->
+  <div class="filter-bar" id="filter-bar">
+    <button class="filter-btn active" data-filter="all">全て</button>
+    <button class="filter-btn" data-filter="3F">3F</button>
+    <button class="filter-btn" data-filter="4F">4F</button>
+    <button class="filter-btn" data-filter="needs">要清掃</button>
+    <button class="filter-btn" data-filter="progress">作業中</button>
+  </div>
+
+  <!-- 部屋一覧 -->
+  <div id="room-container"></div>
+</div>
+
+<!-- ===== モーダル ===== -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-content" id="modal-content">
+    <div class="modal-handle"></div>
+
+    <!-- ステータス選択ビュー -->
+    <div id="status-view">
+      <div class="modal-room-number" id="modal-room-number"></div>
+      <div class="modal-guest" id="modal-guest"></div>
+      <div class="modal-info" id="modal-info"></div>
+      <div class="modal-current">現在のステータス</div>
+      <div class="modal-current-status" id="modal-current-status"></div>
+      <div class="modal-section-label">変更する</div>
+      <div class="status-buttons" id="status-buttons"></div>
+      <button class="close-btn" id="btn-close-modal">閉じる</button>
+    </div>
+
+    <!-- スタッフ選択ビュー -->
+    <div class="staff-select-view" id="staff-view">
+      <div class="modal-room-number" id="staff-room-number"></div>
+      <div class="staff-select-title" id="staff-title"></div>
+      <div class="staff-select-list" id="staff-select-list"></div>
+      <button class="confirm-btn" id="btn-confirm" disabled>確定する</button>
+      <button class="back-btn" id="btn-back">戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== トースト ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== ローディング ===== -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+</div>
+
+<script>
+/* ============================================================
+ * mt. inn 清掃管理 PWA - フロントエンド
+ * ============================================================ */
+
+// ===== ステータス定義 =====
+var STATUS_COLORS = {
+  '在室':        '#CCFFCC',
+  'チェックアウト': '#DDDDDD',
+  '連泊鍵預け中':  '#CCE5FF',
+  '清掃中':      '#FFF2CC',
+  '清掃完了':    '#FFD699',
+  '清掃点検済':  '#99E699'
+};
+var STATUS_LIST = ['在室', 'チェックアウト', '連泊鍵預け中', '清掃中', '清掃完了', '清掃点検済'];
+
+// ===== 状態 =====
+var state = {
+  user: localStorage.getItem('mtinn_user') || '',
+  rooms: [],
+  cleaners: [],
+  checkers: [],
+  filter: 'all',
+  selectedRoom: null,
+  selectedStatus: '',
+  selectedStaff: '',
+  refreshTimer: null,
+  isModalOpen: false
+};
+
+// ===== 初期化 =====
+function init() {
+  if (state.user) {
+    showApp();
+  } else {
+    loadStaffForLogin();
+  }
+  bindEvents();
+}
+
+// ===== ログイン =====
+function loadStaffForLogin() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.status !== 'ok') {
+        document.getElementById('staff-list').innerHTML =
+          '<div class="login-loading">スタッフ情報を取得できませんでした</div>';
+        return;
+      }
+      // 重複を除いた全スタッフリスト
+      var allStaff = [];
+      var seen = {};
+      result.cleaners.concat(result.checkers).forEach(function(name) {
+        if (name && !seen[name]) {
+          seen[name] = true;
+          allStaff.push(name);
+        }
+      });
+      state.cleaners = result.cleaners;
+      state.checkers = result.checkers;
+
+      if (allStaff.length === 0) {
+        document.getElementById('staff-list').innerHTML =
+          '<div class="login-loading">スタッフ一覧シートに名前を登録してください</div>';
+        return;
+      }
+      var html = '';
+      allStaff.forEach(function(name) {
+        html += '<button class="staff-btn" data-name="' + escHtml(name) + '">' + escHtml(name) + '</button>';
+      });
+      document.getElementById('staff-list').innerHTML = html;
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('staff-list').innerHTML =
+        '<div class="login-loading">エラー: ' + escHtml(err.message) + '</div>';
+    })
+    .getStaffData();
+}
+
+function loginAs(name) {
+  state.user = name;
+  localStorage.setItem('mtinn_user', name);
+  showApp();
+}
+
+function logout() {
+  state.user = '';
+  localStorage.removeItem('mtinn_user');
+  stopAutoRefresh();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  loadStaffForLogin();
+}
+
+// ===== アプリ表示 =====
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('header-user').textContent = state.user;
+  loadData();
+  startAutoRefresh();
+}
+
+// ===== データ取得 =====
+function loadData() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.status === 'ok') {
+        state.rooms = result.rooms;
+        renderRooms();
+        renderProgress();
+      } else {
+        showToast(result.message || 'データ取得エラー', 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      showToast('通信エラー: ' + err.message, 'error');
+    })
+    .getRoomsData();
+
+  // スタッフ情報を必ず取得
+  loadStaff();
+}
+
+function loadStaff() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.status === 'ok') {
+        state.cleaners = result.cleaners;
+        state.checkers = result.checkers;
+      }
+    })
+    .withFailureHandler(function(err) {
+      // スタッフ取得失敗は静かに無視（次回リフレッシュで再取得）
+    })
+    .getStaffData();
+}
+
+// ===== 自動更新 =====
+function startAutoRefresh() {
+  stopAutoRefresh();
+  state.refreshTimer = setInterval(function() {
+    if (!state.isModalOpen) {
+      loadData();
+    }
+  }, 30000);
+}
+
+function stopAutoRefresh() {
+  if (state.refreshTimer) {
+    clearInterval(state.refreshTimer);
+    state.refreshTimer = null;
+  }
+}
+
+// ===== 進捗バー描画 =====
+function renderProgress() {
+  var rooms = state.rooms;
+  var total = rooms.length;
+  if (total === 0) {
+    document.getElementById('progress-text').textContent = '--';
+    document.getElementById('progress-bar').innerHTML = '';
+    document.getElementById('progress-counts').innerHTML = '';
+    return;
+  }
+
+  var counts = { '在室': 0, 'チェックアウト': 0, '連泊鍵預け中': 0, '清掃中': 0, '清掃完了': 0, '清掃点検済': 0, '': 0 };
+  rooms.forEach(function(r) { counts[r.status] = (counts[r.status] || 0) + 1; });
+
+  var done = counts['清掃点検済'];
+  var cleaned = counts['清掃完了'];
+  var cleaning = counts['清掃中'];
+
+  document.getElementById('progress-text').textContent =
+    '点検済 ' + done + ' / ' + total + ' 部屋';
+
+  var pctI = (done / total * 100).toFixed(1);
+  var pctC = (cleaned / total * 100).toFixed(1);
+  var pctW = (cleaning / total * 100).toFixed(1);
+  document.getElementById('progress-bar').innerHTML =
+    '<div class="progress-fill-inspected" style="width:' + pctI + '%"></div>' +
+    '<div class="progress-fill-cleaned" style="width:' + pctC + '%"></div>' +
+    '<div class="progress-fill-cleaning" style="width:' + pctW + '%"></div>';
+
+  var badges = [
+    { label: '在室 ' + counts['在室'], bg: '#CCFFCC' },
+    { label: 'CO ' + counts['チェックアウト'], bg: '#DDDDDD' },
+    { label: '鍵預 ' + counts['連泊鍵預け中'], bg: '#CCE5FF' },
+    { label: '清掃中 ' + counts['清掃中'], bg: '#FFF2CC' },
+    { label: '完了 ' + counts['清掃完了'], bg: '#FFD699' },
+    { label: '点検済 ' + counts['清掃点検済'], bg: '#99E699' },
+  ];
+  var badgeHtml = '';
+  badges.forEach(function(b) {
+    badgeHtml += '<span class="count-badge" style="background:' + b.bg + '">' + b.label + '</span>';
+  });
+  document.getElementById('progress-counts').innerHTML = badgeHtml;
+}
+
+// ===== 部屋一覧描画 =====
+function renderRooms() {
+  var rooms = filterRooms(state.rooms);
+  var container = document.getElementById('room-container');
+
+  if (rooms.length === 0) {
+    container.innerHTML = '<div class="empty-message">表示する部屋がありません</div>';
+    return;
+  }
+
+  // フロア別グループ
+  var floor3 = rooms.filter(function(r) { return r.roomNo.charAt(0) === '3'; });
+  var floor4 = rooms.filter(function(r) { return r.roomNo.charAt(0) === '4'; });
+
+  var html = '';
+  if (floor3.length > 0) {
+    html += '<div class="floor-section"><div class="floor-header">3F</div><div class="room-grid">';
+    floor3.forEach(function(r) { html += renderRoomCard(r); });
+    html += '</div></div>';
+  }
+  if (floor4.length > 0) {
+    html += '<div class="floor-section"><div class="floor-header">4F</div><div class="room-grid">';
+    floor4.forEach(function(r) { html += renderRoomCard(r); });
+    html += '</div></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function renderRoomCard(room) {
+  var isEmpty = !room.guest && !room.status;
+  var bg = STATUS_COLORS[room.status] || '#FFFFFF';
+  var cls = 'room-card' + (isEmpty ? ' empty' : '');
+
+  var badgeHtml = '';
+  if (room.isFullCleaning && room.status !== '清掃点検済') {
+    badgeHtml = '<div class="room-badge full-clean">フル清掃</div>';
+  }
+
+  var staffHtml = '';
+  if (room.cleaner) staffHtml += '清掃:' + escHtml(room.cleaner);
+  if (room.checker) staffHtml += (staffHtml ? ' ' : '') + '点検:' + escHtml(room.checker);
+  if (staffHtml) staffHtml = '<div class="room-staff">' + staffHtml + '</div>';
+
+  return '<div class="' + cls + '" style="background:' + bg + '" data-row="' + room.row + '">' +
+    '<div class="room-number">' + escHtml(room.roomNo) + '</div>' +
+    (room.nights ? '<div class="room-nights">' + escHtml(room.nights) + '</div>' : '') +
+    (room.guest ? '<div class="room-guest">' + escHtml(room.guest) + '</div>' : '') +
+    '<div class="room-status-text">' + (room.status ? escHtml(room.status) : (isEmpty ? '空室' : '---')) + '</div>' +
+    staffHtml +
+    badgeHtml +
+    '</div>';
+}
+
+function filterRooms(rooms) {
+  var f = state.filter;
+  return rooms.filter(function(r) {
+    if (f === '3F') return r.roomNo.charAt(0) === '3';
+    if (f === '4F') return r.roomNo.charAt(0) === '4';
+    if (f === 'needs') return r.status === 'チェックアウト' || r.status === '連泊鍵預け中';
+    if (f === 'progress') return r.status === '清掃中' || r.status === '清掃完了';
+    return true;
+  });
+}
+
+// ===== モーダル =====
+function openModal(room) {
+  state.selectedRoom = room;
+  state.isModalOpen = true;
+
+  document.getElementById('modal-room-number').textContent = room.roomNo + '号室';
+  document.getElementById('modal-guest').textContent = room.guest ? room.guest + ' 様' : '空室';
+
+  // 情報タグ
+  var infoHtml = '';
+  if (room.nights) infoHtml += '<span class="modal-info-tag">泊数 ' + escHtml(room.nights) + '</span>';
+  if (room.plan) {
+    var shortPlan = room.plan.length > 15 ? room.plan.substring(0, 15) + '...' : room.plan;
+    infoHtml += '<span class="modal-info-tag">' + escHtml(shortPlan) + '</span>';
+  }
+  if (room.pax) infoHtml += '<span class="modal-info-tag">' + escHtml(room.pax) + '名</span>';
+  if (room.isFullCleaning) infoHtml += '<span class="modal-info-tag highlight">フル清掃</span>';
+  document.getElementById('modal-info').innerHTML = infoHtml;
+
+  // 現在のステータス
+  var csEl = document.getElementById('modal-current-status');
+  csEl.textContent = room.status || '未設定';
+  csEl.style.background = STATUS_COLORS[room.status] || '#F0F0F0';
+
+  // ステータスボタン
+  var btnHtml = '';
+  STATUS_LIST.forEach(function(st) {
+    var isCurrent = (st === room.status);
+    var cls = 'status-btn' + (isCurrent ? ' current' : '');
+    var bg = STATUS_COLORS[st];
+    var check = isCurrent ? ' &#10003;' : '';
+    btnHtml += '<button class="' + cls + '" style="background:' + bg + '" data-status="' + st + '">' +
+      escHtml(st) + check + '</button>';
+  });
+  document.getElementById('status-buttons').innerHTML = btnHtml;
+
+  // ビュー切替
+  document.getElementById('status-view').style.display = 'block';
+  document.getElementById('staff-view').classList.remove('show');
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  state.isModalOpen = false;
+  state.selectedRoom = null;
+  state.selectedStatus = '';
+  state.selectedStaff = '';
+  document.getElementById('modal').classList.remove('show');
+}
+
+function onStatusSelect(newStatus) {
+  var room = state.selectedRoom;
+  if (!room) return;
+  if (newStatus === room.status) return; // 変更なし
+
+  // 清掃完了 → ログイン者を清掃担当として自動記録
+  if (newStatus === '清掃完了') {
+    submitStatusUpdate(newStatus, state.user, '');
+    return;
+  }
+  // 清掃点検済 → ログイン者を点検担当として自動記録
+  if (newStatus === '清掃点検済') {
+    submitStatusUpdate(newStatus, room.cleaner || '', state.user);
+    return;
+  }
+
+  // それ以外は直接更新
+  submitStatusUpdate(newStatus, '', '');
+}
+
+// cleanersとcheckersを統合して重複なしの全スタッフリストを返す
+function getAllStaff() {
+  var seen = {};
+  var all = [];
+  state.cleaners.concat(state.checkers).forEach(function(name) {
+    if (name && !seen[name]) {
+      seen[name] = true;
+      all.push(name);
+    }
+  });
+  return all;
+}
+
+function showStaffSelection(newStatus, staffList, title) {
+  state.selectedStatus = newStatus;
+  state.selectedStaff = '';
+
+  document.getElementById('staff-room-number').textContent =
+    state.selectedRoom.roomNo + '号室 → ' + newStatus;
+  document.getElementById('staff-title').textContent = title;
+
+  var html = '';
+  staffList.forEach(function(name) {
+    var isSelf = (name === state.user);
+    var cls = 'staff-select-btn' + (isSelf ? ' selected' : '');
+    html += '<button class="' + cls + '" data-staff="' + escHtml(name) + '">' +
+      escHtml(name) + (isSelf ? '（自分）' : '') + '</button>';
+  });
+  document.getElementById('staff-select-list').innerHTML = html;
+
+  // 自分を自動選択
+  if (staffList.indexOf(state.user) >= 0) {
+    state.selectedStaff = state.user;
+    document.getElementById('btn-confirm').disabled = false;
+  } else {
+    document.getElementById('btn-confirm').disabled = true;
+  }
+
+  document.getElementById('status-view').style.display = 'none';
+  document.getElementById('staff-view').classList.add('show');
+}
+
+function onStaffSelect(name) {
+  state.selectedStaff = name;
+  // UIの選択状態を更新
+  var btns = document.querySelectorAll('#staff-select-list .staff-select-btn');
+  btns.forEach(function(b) {
+    b.classList.toggle('selected', b.getAttribute('data-staff') === name);
+  });
+  document.getElementById('btn-confirm').disabled = false;
+}
+
+function onConfirm() {
+  var newStatus = state.selectedStatus;
+  var staff = state.selectedStaff;
+  if (!staff) return;
+
+  var cleaner = (newStatus === '清掃完了') ? staff : (state.selectedRoom.cleaner || '');
+  var checker = (newStatus === '清掃点検済') ? staff : (state.selectedRoom.checker || '');
+  submitStatusUpdate(newStatus, cleaner, checker);
+}
+
+function onBack() {
+  document.getElementById('staff-view').classList.remove('show');
+  document.getElementById('status-view').style.display = 'block';
+}
+
+// ===== API: ステータス更新 =====
+function submitStatusUpdate(newStatus, cleaner, checker) {
+  var room = state.selectedRoom;
+  if (!room) return;
+
+  showLoading(true);
+  closeModal();
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      showLoading(false);
+      if (result.status === 'ok') {
+        showToast(result.message, 'success');
+        loadData(); // 最新データを再取得
+      } else {
+        showToast(result.message || '更新エラー', 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      showLoading(false);
+      showToast('通信エラー: ' + err.message, 'error');
+    })
+    .updateRoomStatus({
+      row: room.row,
+      roomNo: room.roomNo,
+      newStatus: newStatus,
+      cleaner: cleaner,
+      checker: checker
+    });
+}
+
+// ===== イベントバインド =====
+function bindEvents() {
+  // ログインボタン（委任）
+  document.getElementById('staff-list').addEventListener('click', function(e) {
+    var btn = e.target.closest('.staff-btn');
+    if (btn) loginAs(btn.getAttribute('data-name'));
+  });
+
+  // ヘッダーボタン
+  document.getElementById('btn-refresh').addEventListener('click', function() {
+    loadData();
+    showToast('更新しました', 'success');
+  });
+  document.getElementById('btn-logout').addEventListener('click', logout);
+
+  // フィルター
+  document.getElementById('filter-bar').addEventListener('click', function(e) {
+    var btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    state.filter = btn.getAttribute('data-filter');
+    document.querySelectorAll('.filter-btn').forEach(function(b) {
+      b.classList.toggle('active', b === btn);
+    });
+    renderRooms();
+  });
+
+  // 部屋カードタップ（委任）
+  document.getElementById('room-container').addEventListener('click', function(e) {
+    var card = e.target.closest('.room-card');
+    if (!card) return;
+    var row = parseInt(card.getAttribute('data-row'), 10);
+    var room = state.rooms.find(function(r) { return r.row === row; });
+    if (room) openModal(room);
+  });
+
+  // モーダル：ステータスボタン（委任）
+  document.getElementById('status-buttons').addEventListener('click', function(e) {
+    var btn = e.target.closest('.status-btn');
+    if (btn) onStatusSelect(btn.getAttribute('data-status'));
+  });
+
+  // モーダル：スタッフ選択（委任）
+  document.getElementById('staff-select-list').addEventListener('click', function(e) {
+    var btn = e.target.closest('.staff-select-btn');
+    if (btn) onStaffSelect(btn.getAttribute('data-staff'));
+  });
+
+  // モーダル：確定・戻る・閉じる
+  document.getElementById('btn-confirm').addEventListener('click', onConfirm);
+  document.getElementById('btn-back').addEventListener('click', onBack);
+  document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+
+  // モーダル：オーバーレイタップで閉じる
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+}
+
+// ===== UI ヘルパー =====
+function showToast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (type || '');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+function showLoading(show) {
+  document.getElementById('loading').classList.toggle('show', show);
+}
+
+function escHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ===== 起動 =====
+init();
+</script>
+</body>
+</html>
