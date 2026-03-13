@@ -191,8 +191,8 @@ function generateCleaningSheet() {
     if (!is314) {
       if (isCheckin) {
         shade = '#CCFFCC'; // 黄緑
-      } else if (isStay) {
-        shade = '#CCFFFF'; // 水色
+      } else if (isThirdCleaning) {
+        shade = '#CCFFFF'; // 水色（3泊ごとの連泊清掃日のみ）
       }
     }
     bgA.push([shade]);
