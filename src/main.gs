@@ -56,8 +56,19 @@ function generateCleaningSheet() {
 
   /***** 2) CSVを読み込み（ねっぱん: Shift_JIS） *****/
   const blob = todayFile.getBlob();
-  const csvString = blob.getDataAsString('Shift_JIS');
-  const rows = Utilities.parseCsv(csvString);
+  const rawCsvString = blob.getDataAsString('Shift_JIS');
+
+  // CSVクリーニング: 不正な引用符を除去してparseCsvのエラーを防止
+  const csvString = cleanCsvText(rawCsvString);
+
+  let rows;
+  try {
+    rows = Utilities.parseCsv(csvString);
+  } catch (e) {
+    // parseCsv失敗時はフォールバック: 行単位で分割しカンマ区切り
+    Logger.log('parseCsv失敗、フォールバックパーサー使用: ' + e.message);
+    rows = fallbackParseCsv(csvString);
+  }
   if (!rows || rows.length === 0) {
     throw new Error('CSVの中身が空です。');
   }
@@ -564,4 +575,53 @@ function calcNights(fromDate, toDate) {
 /** 数列生成ユーティリティ */
 function range(a, b) {
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
+}
+
+/**
+ * CSVテキストのクリーニング
+ * - 不正なダブルクォート（閉じていない引用符）を除去
+ * - BOMを除去
+ * - NULLバイトを除去
+ */
+function cleanCsvText(text) {
+  if (!text) return '';
+
+  // BOM除去
+  let cleaned = text.replace(/^\uFEFF/, '');
+
+  // NULLバイト除去
+  cleaned = cleaned.replace(/\0/g, '');
+
+  // 各行ごとにダブルクォートの数をチェックし、奇数なら末尾の引用符を除去
+  const lines = cleaned.split('\n');
+  const fixedLines = lines.map(function(line) {
+    const quoteCount = (line.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0) {
+      // 奇数 = 閉じていない引用符 → 全てのダブルクォートを除去
+      return line.replace(/"/g, '');
+    }
+    return line;
+  });
+
+  return fixedLines.join('\n');
+}
+
+/**
+ * フォールバックCSVパーサー
+ * Utilities.parseCsv()が失敗した場合に使用
+ */
+function fallbackParseCsv(text) {
+  if (!text) return [];
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    // シンプルなカンマ分割（ダブルクォート内のカンマは非対応だが緊急用）
+    const cells = line.split(',').map(function(cell) {
+      return cell.replace(/^"/, '').replace(/"$/, '').trim();
+    });
+    result.push(cells);
+  }
+  return result;
 }
